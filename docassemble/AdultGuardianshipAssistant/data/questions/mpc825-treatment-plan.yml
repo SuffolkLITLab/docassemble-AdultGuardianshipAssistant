@@ -8,9 +8,6 @@ comment: |
 id: interview_order_mpc825treatmentplan
 code: |
   # Set the allowed courts for this interview
-  allowed_courts = interview_metadata["mpc825treatmentplan"]["allowed courts"]
-  nav.set_section('review_mpc825treatmentplan')
-  user_role = 'plaintiff'
   Respondent
   Tell_us_about_the_Respondents_Medication
   AltAntiPsych_meds1

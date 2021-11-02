@@ -60,6 +60,9 @@ objects:
 objects:
   - other_parties[0].new_address: ALAddress  
 ---
+code: |
+  al_form_type = 'starts_case'
+---
 ###################### Main order ######################
 mandatory: True
 id: main_order_Guardianship_Assistant
@@ -81,14 +84,14 @@ comment: |
 id: interview_order_Guardianship_Assistant
 code: |
   # Set the allowed courts for this interview
+  allowed_courts = interview_metadata["Guardianship_Assistant"]["allowed courts"]
+  nav.set_section('review_Guardianship_Assistant')  
+  other_parties[0].name.first
   if not last_option: 
     all_done
-  allowed_courts = interview_metadata["Guardianship_Assistant"]["allowed courts"]
-  nav.set_section('review_Guardianship_Assistant')
   user_role = 'plaintiff'
   temporary_needed
   users[0].name.first
-  other_parties[0].name.first
   users.gather()
   # has_copetitioner
   if has_copetitioner:
@@ -115,11 +118,10 @@ code: |
   set_progress(27.27)
   Attorney_BBO
   docket_numbers.gather()
-  Attorney.address.state
+  Attorney.address.address
   set_progress(36.36)
   Attorney.phone_number
-  Attorney.address.zip
-  Guardian.address.state
+  Guardian.address.address
   set_progress(45.45)
   Attorney.address.city
   other_parties[0].gender
@@ -132,12 +134,11 @@ code: |
     coguardian_name_first
     CoGuardian_relationship
   other_parties[0].name.last
-  users[0].address.zip
   users[0].address.address
-  Guardian.address.zip
+  Guardian.address.address
   users[0].name.last
   set_progress(63.64)
-  Guardian.address.unit
+  Guardian.address.address
   Guardian.email
   users[0].name.first
   users[0].phone_number
@@ -182,24 +183,30 @@ subquestion: |
 id: Guardianship Filter
 mandatory: true
 question: |
-  Is Guardianship the right choice for you?
+  Is a guardianship the right choice for ${ other_parties.familiar() }?
 subquestion: |
-  **Guardianships transfer decision-making power away from an individual to the
+  Before we keep going, let's make sure that guardianship is the right
+  choice to protect ${ other_parties.familiar() }.
+
+  Guardianships transfer decision-making power away from an individual to the
   Guardian. It is meant to be used in situations where the individual cannot
   make or communicate decisions or preferences. Guardianships are difficult to
-  undo and should be viewed as a last resort**
+  undo and should be viewed as a last resort.
 
-    Other options may include one or more of the following:
+  Other options include:
 
-  * [Supported Decision Making](https://supporteddecisions.org); * [Healthcare
+  * [Supported Decision Making](https://supporteddecisions.org); 
+  * [Healthcare
   Proxy](https://masshealthdecisions.org/health-care-proxy/#:~:text=The%20Massachusetts%20Health%20Care%20Proxy,or%20communicate%20those%20decisions%20yourself.Healthcare
-  Proxy Forms); * [Representative Payeee](https://www.ssa.gov/payee/faqrep.htm);
-  and/or * [Durable Power of
+  Proxy Forms); 
+  * [Representative Payeee](https://www.ssa.gov/payee/faqrep.htm);
+  or
+  * [Durable Power of
   Attorney](https://www.mass.gov/service-details/learn-about-the-power-of-attorney)
 field: last_option
 buttons:
-  -"Research Alternatives": False
-  -"Proceed with Guardianship": True
+  - "Research Alternatives": False
+  - "Proceed with Guardianship": True
 ---
 question: |
   Thank you for using the Guardianship Assistant
@@ -208,18 +215,28 @@ subquestion: |
   move forward with Guardianship please visit again. Other options may include
   one or more of the following:
 
-  * [Supported Decision Making](https://supporteddecisions.org); * [Healthcare
+  * [Supported Decision Making](https://supporteddecisions.org); 
+  * [Healthcare
   Proxy](https://masshealthdecisions.org/health-care-proxy/#:~:text=The%20Massachusetts%20Health%20Care%20Proxy,or%20communicate%20those%20decisions%20yourself.Healthcare
-  Proxy Forms); * [Representative Payeee](https://www.ssa.gov/payee/faqrep.htm);
+  Proxy Forms); 
+  * [Representative Payeee](https://www.ssa.gov/payee/faqrep.htm);
   and/or * [Durable Power of
   Attorney](https://www.mass.gov/service-details/learn-about-the-power-of-attorney)
 event: all_done
 ---
 id: Temporary Guardianship
 question: | 
-  Do you need guardianship for urgent situation or appointment in the next 90 days?
-yesno: temporary_needed
-note:  |
+  Do you need to the court to decide on this case in the next 90 days?
+subquestion: |
+  ${ collapse_template(when_temporary_guardianship_possible_template) }
+fields: 
+  - I need a temporary guardianship: temporary_needed
+    datatype: yesnoradio    
+---
+template: when_temporary_guardianship_possible_template
+subject: |
+  When can I get a temporary guardianship?
+content:  |
   You may request a temporary guardianship if there is an emergency or urgent
   situation or appointment which requires a guardian within the next 90 days.
 ---
@@ -227,7 +244,7 @@ id: Has Co-Petitioner?
 question: |
   Is there a Co-Petitioner?
 subquestion: |
-  The "Co-Petitioner" is a second person asking the court to appoint a guardian for the other_parties[0].
+  The "Co-Petitioner" is a second person asking the court to appoint a guardian for ${ other_parties.familiar() }.
 yesno: has_copetitioner
 ---
 code: |
@@ -249,14 +266,14 @@ question: |
   What is the Co-Petitioner's name?
 subquestion: |
   The "Co-Petitioner" is a second person asking the court to appoint a guardian
-  for ${ other_parties[0] }.
+  for ${ other_parties.familiar() }.
 fields:
   - code: |
       users[1].name_fields()
 ---
 id: more about copetitioner
 question: | 
-  Tell us more about ${ users[1] }.
+  Where does ${ users[1] } live?
 fields:
   - Does ${ users[1] } live at a different address than ${ users[0].familiar() }?: CoPetitioner_Petitioner_different_address
     datatype: yesnoradio
@@ -265,17 +282,59 @@ fields:
   - code: |
       users[1].address_fields(default_state="MA")
 ---
+use objects: True
+variable name: relationship_options
+data:
+  spouse: 
+    question: Spouse
+    document: spouse    
+  parent:    
+    question: Parent
+    document: parent
+  child:
+    question: Child
+    document: child
+  sibling:    
+    question: Sibling
+    document: sibling
+  uncle_aunt:    
+    question: Sibling of parent
+    document: sibling of parent
+  niece_nephew:    
+    question: Child of parent's sibling
+    document: child of parent's sibling
+  cousin:
+    question: Cousin
+    document: cousin
+  grandparent:    
+    question: Grandparent
+    document: grandparent
+  other:    
+    question: Other
+    document: other
+---
 id: other contact for copetitioner      
 question: |
   Other contact information for the ${ users[1] }
 fields:
   - Primary Phone: users[1].phone_number
   - E-mail Address: users[1].email
-  - Relationship to Respondent: CoPetitioner_relationship
-    hint: e.g. parent, child, sibling, aunt/uncle, grandparent, etc.
+  - Relationship to ${ other_parties.familiar() }: CoPetitioner_relationship
+    datatype: radio
+    code: |
+      relationship_options.items()
   - Why is the Co-Petitioner interested in the appointment of a Guardian for ${ other_parties[0] }? Please explain in 1-3 sentences: CoPetitioner_interests
     input type: area
     rows: 10
+---
+sets:
+  - other_parties[i].name.first
+id: names of respondent
+question: |
+  Who are you asking to protect?
+fields:
+  - code: |
+      other_parties[i].name_fields()
 ---
 id: Tell me more about the Petitioner
 question: |
@@ -283,8 +342,10 @@ question: |
 fields:
   - E-mail Address: users[0].email
     maxlength: 37
-  - Relationship to ${ other_parties }: Petitioner_relationship
-    hint: parent, child, sibling, aunt/uncle, grandparent, etc.
+  - "I am ${ other_parties.familiar() }'s:" : Petitioner_relationship
+    datatype: radio
+    code: |
+      relationship_options.items()
   - Why is ${ users[0] } seeking a guardianship for ${ other_parties }? Please explain in 1-3 sentences: Petitioner_interest_list
     input type: area
     rows: 10  

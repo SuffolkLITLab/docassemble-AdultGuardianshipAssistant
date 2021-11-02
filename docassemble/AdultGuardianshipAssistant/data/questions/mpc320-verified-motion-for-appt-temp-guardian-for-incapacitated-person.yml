@@ -2,7 +2,7 @@
 objects:
   - Respondent: ALPeopleList.using(ask_number=True,target_number=1)
   - users: ALPeopleList.using(ask_number=True,target_number=1)
-  - TempGuardian: ALPeopleList.using(ask_number=True,target_number=1)
+  - TempGuardian: ALIndividual
 ---
 #################### Interview order #####################
 comment: |
@@ -10,8 +10,6 @@ comment: |
 id: interview_order_mpc320verifiedmotionforappttempguardianforincapacitatedperson
 code: |
   # Set the allowed courts for this interview
-  allowed_courts = interview_metadata["mpc320verifiedmotionforappttempguardianforincapacitatedperson"]["allowed courts"]
-  nav.set_section('review_mpc320verifiedmotionforappttempguardianforincapacitatedperson')
   user_role = 'plaintiff'
   Temporary_guardianship_reasons
   County

@@ -10,8 +10,6 @@ comment: |
 id: interview_order_Bond_MPC_801
 code: |
   # Set the allowed courts for this interview
-  allowed_courts = interview_metadata["Bond_MPC_801"]["allowed courts"]
-  nav.set_section('review_Bond_MPC_801')
   user_role = 'plaintiff'
   Are_you_filing_a_corporate_bond
   withoutsureties_yes
@@ -145,9 +143,8 @@ subquestion: |
 objects:
   - Bond_MPC_801_attachment: ALDocument.using(title="Bond mpc 801", filename="Bond_MPC_801", has_addendum=False)
 ---
-objects:
-  - al_user_bundle: ALDocumentBundle.using(elements=[Bond_MPC_801_attachment], filename="Bond_MPC_801.pdf", title="All forms to download for your records")
-  - al_court_bundle: ALDocumentBundle.using(elements=[Bond_MPC_801_attachment], filename="Bond_MPC_801.pdf", title="All forms to download for your records")
+code: |
+  Bond_MPC_801_attachment.enabled = True # TODO: fix this
 ---
 attachment:
     variable name: Bond_MPC_801_attachment[i]
