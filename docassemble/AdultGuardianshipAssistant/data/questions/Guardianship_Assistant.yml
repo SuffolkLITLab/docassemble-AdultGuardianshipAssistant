@@ -92,17 +92,23 @@ code: |
   user_role = 'plaintiff'
   temporary_needed
   users[0].name.first
-  users.gather()
+  Petitioner_relationship  
   # has_copetitioner
   if has_copetitioner:
     users[1].address.address
   else:
     users[0].address.city
   users[0].address.city
-  Petitioner_relationship
+  users[0].email
+  Petitioner_interest_list  
   if not Same_address_yes:
     other_parties[0].address.address
   other_parties[0].birthdate
+  spouses.gather()
+  parents.gather()
+  siblings.gather()
+  caretakers.gather()
+  children.gather()
   Respondent_address_date
   Current_Guardian
   set_progress(9.09)
@@ -315,7 +321,7 @@ data:
 ---
 id: other contact for copetitioner      
 question: |
-  Other contact information for the ${ users[1] }
+  Other contact information for ${ users[1] }
 fields:
   - Primary Phone: users[1].phone_number
   - E-mail Address: users[1].email
@@ -336,27 +342,39 @@ fields:
   - code: |
       other_parties[i].name_fields()
 ---
-id: Tell me more about the Petitioner
+id: email
 question: |
-  Tell me more about ${ users[0] }.
+  What is your email address?
 fields:
   - E-mail Address: users[0].email
     maxlength: 37
+---
+id: reason for guardianship
+question: |
+  Why do you need a guardianship?
+subquestion: |
+  Use your own words to briefly explain.
+fields:
+  - no label: Petitioner_interest_list
+    datatype: area
+    rows: 5
+---
+id: Tell me more about the Petitioner
+question: |
+  How are you related to ${ other_parties.familiar() }?
+fields:
   - "I am ${ other_parties.familiar() }'s:" : Petitioner_relationship
     datatype: radio
     code: |
       relationship_options.items()
-  - Why is ${ users[0] } seeking a guardianship for ${ other_parties }? Please explain in 1-3 sentences: Petitioner_interest_list
-    input type: area
-    rows: 10  
 ---
 sets:
   - other_parties[0].gender
 id: Tell me more about Respondent
 question: |
-  Tell me more about the ${ other_parties[0] }.
+  Information about ${ other_parties[0] }
 fields:
-  - Date of Birth: other_parties[0].birthdate
+  - When was ${ other_parties.familiar() } born?: other_parties[0].birthdate
     datatype: date 
   - code: |
       other_parties[0].gender_fields()          
@@ -370,39 +388,142 @@ fields:
       variable: primary_language
       is: Other
   - Primary Phone Number: other_parties[0].phone_number
-  - Is the primary address of ${ other_parties[0] } the same as ${ users[0] }?: Same_address_yes
+  - Does ${ other_parties.familiar() } live with you?: Same_address_yes
     datatype: yesnoradio
-  - Do they have a MOLST (Medical Orders for Life-Sustaining Treatment)?: RespondentMOLST
+  - Does ${ other_parties.familiar() } have a MOLST (Medical Orders for Life-Sustaining Treatment)?: RespondentMOLST
     datatype: yesnoradio
     help: |
       A document executed by the Respondent that describes a person’s wishes
       about end-of-life medical care. For more information on what a MOLST is
       please visit: https://www.molst-ma.org/.
-  - Are they a Veteran?: RespondentVA
-    datatype: yesnoradio
-  - Please select all of the relationships ${ other_parties[0] } has: has_family
-    datatype: checkboxes
-    choices:
-    - Spouse
-    - Child of Children
-    - Living Parent or Sibling
-    - Care Taker within the last 60 days
+  - Does ${ other_parties.familiar() } qualify to get benefits from the Veteran's Authority?: RespondentVA
+    datatype: yesnomaybe
 ---
-
+objects:
+  - spouses: ALPeopleList.using(ask_number=True)
+  - parents: ALPeopleList
+  - siblings: ALPeopleList.using(ask_number=True)
+  - caretakers: ALPeopleList
+---
+id: relationships
 question: |
-  Tell me more about ${ other_parties[0] }'s primary housing or living arrangements.
+  Who is related to ${ other_parties.familiar() }?
 subquestion: |
-  This may be different than their current address.
-fields:
-   - When did ${ other_parties[0] } begin living there?: Respondent_address_date
-     help: |
-        If you do not know, please provide your best guess.
-   - Does ${ other_parties[0] } currently live here?: Potential_Residence_current
-     datatype: yesnoradio
-   - Will ${ other_parties[0] } live here if the guardianship is granted?: Potential_Residence_same
-     datatype: yesnoradio
+  What living family or caretakers does ${ other_parties.familiar() } have?
+fields:  
+  - Spouse: spouses.has_spouse
+    datatype: yesno
+  - Children: children.there_are_any
+    datatype: yesno
+  - How many?: children.target_number
+    datatype: integer
+    show if: children.there_are_any
+  - Parents: parents.there_are_any
+    datatype: yesno
+  - Siblings: siblings.there_are_any
+    datatype: yesno    
+  - How many?: siblings.target_number
+    datatype: integer
+    show if: siblings.there_are_any
+  - Caretakers: caretakers.there_are_any
+    datatype: yesno
+  - ${ other_parties.familiar() } does not have any of these relationships: no_relatives
+    datatype: yesno
+    uncheck others: True
 ---
-
+id: spouse name
+sets:
+  - spouses[0].name.first
+  - spouses[0].name.last
+question: |
+  Who is ${ other_parties.familiar() } married to?
+fields:
+  - code: |
+      spouses[0].name_fields()
+---
+id: parents name
+sets:
+  - parents[0].name.first
+  - parents[0].name.last
+question: |
+  Name of ${ other_parties.familiar() }'s first (living) parent
+fields:
+  - code: |
+      parents[0].name_fields()
+---
+id: another parent
+question: |
+  Does ${ other_parties.familiar() } have another living parent?
+field: parents.there_is_another
+choices:
+  - Yes: True
+  - No: False
+---
+id: another sibling
+question: |
+  Does ${ other_parties.familiar() } have another sibling?
+field: siblings.there_is_another
+choices:
+  - Yes: True
+  - No: False  
+---
+code: |
+  # TODO: does it make sense to use plural for consistency? or
+  # use a singular `spouse` variable? won't decide yet
+  if spouses.has_spouse:
+    spouses.target_number = 1
+  else:
+    spouses.target_number = 0
+---    
+id: sibling names
+sets:
+  - siblings[0].name.first
+  - siblings[0].name.last
+question: |
+  % if hasattr(siblings, 'ask_number') and siblings.ask_number and siblings.target_number == 1:
+  Sibling's name
+  % else:
+  Name of oldest sibling
+  % endif
+fields:
+  - code: |
+      siblings[0].name_fields()    
+---
+objects:
+  - other_parties[0].principal_residence: ALAddress
+---
+sets:
+  - other_parties[0].principal_residence.address
+  - other_parties[0].principal_residence.city
+question: |
+  What is ${ other_parties.familiar() }'s **principal residence***?
+subquestion: |
+  This is normally where ${ other_parties.familiar() } **usually**
+  lives.
+fields:
+  #- no label: other_parties[0].principal_residence
+  #  datatype: object_radio
+  #  choices:
+  #    - other_parties[0].address
+  #    - petitioners[0].address
+  #  disable others:
+  #    - other_parties[0].address.address
+  #    - other_parties[0].address.city
+  #    - other_parties[0].address.state
+  #    - other_parties[0].address.zip
+  #    - other_parties[0].address.unit
+  #    - other_parties[0].address.country   
+  #  none of the above: True      
+  - code: |
+      other_parties[0].principal_residence.address_fields(show_country=True)
+  - When did ${ other_parties[0] } begin living there?: Respondent_address_date
+    help: |
+      If you do not know, please provide your best guess.
+  - Does ${ other_parties[0] } currently live here?: Potential_Residence_current
+    datatype: yesnoradio
+  - Will ${ other_parties[0] } live here if the guardianship is granted?: Potential_Residence_same
+    datatype: yesnoradio
+---
 question: |
   ${ other_parties[0] }'s Relationships
 subquestion: |
@@ -415,7 +536,10 @@ fields:
   - Do they have a current Conservator?: Current_Conservator
     datatype: yesnomaybe
     help: |
-      The court may appoint a Conservator to manage the Respondent’s finances if the court determines the Respondent is unable to do so themselves. A Conservator is usually only appointed when the Respondent has more than $5,000 worth of money and assets.
+      The court may appoint a Conservator to manage the Respondent’s finances 
+      if the court determines the Respondent is unable to do so themselves. A 
+      Conservator is usually only appointed when the Respondent has more than 
+      $5,000 worth of money and assets.
   - Do they have a Representative Payee?: RepPayee
     datatype: yesnomaybe
   - Do they have a Representative Health Care Agent or Proxy?: HealthProxy
