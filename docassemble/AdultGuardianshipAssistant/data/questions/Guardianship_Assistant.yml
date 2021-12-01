@@ -88,10 +88,13 @@ code: |
   nav.set_section('review_Guardianship_Assistant')  
   other_parties[0].name.first
   if not last_option: 
-    all_done
+    all_done    
   user_role = 'plaintiff'
   temporary_needed
   users[0].name.first
+  other_parties[0].birthdate  
+  if other_parties[0].age_in_years() < 18:
+    exit_not_adult
   Petitioner_relationship  
   # has_copetitioner
   if has_copetitioner:
@@ -100,10 +103,11 @@ code: |
     users[0].address.city
   users[0].address.city
   users[0].email
-  Petitioner_interest_list  
+  Respondent_intellectual_disabled  
+  Petitioner_interest_list
   if not Same_address_yes:
     other_parties[0].address.address
-  other_parties[0].birthdate
+  other_parties[0].gender
   spouses.gather()
   parents.gather()
   siblings.gather()
@@ -111,8 +115,8 @@ code: |
   children.gather()
   Respondent_address_date
   Current_Guardian
-  set_progress(9.09)
-  Respondent_intellectual_disabled
+  Guardian_relationship
+  set_progress(9.09)  
   Has_Assets
   Petitioner_appointee
   set_progress(18.18)
@@ -213,6 +217,23 @@ field: last_option
 buttons:
   - "Research Alternatives": False
   - "Proceed with Guardianship": True
+---
+id: birthdate only
+question: |
+  When was ${ other_parties.familiar() } born? 
+  - no label: other_parties[0].birthdate
+    datatype: BirthDate 
+---
+event: exit_not_adult
+id: not an adult
+question: |
+  This is not the right form for you
+decoration: hand-paper
+subquestion: |
+  You can only use this form to get protections for an **adult**.
+  ${ other_parties[0].familiar() } is only ${ other_parties[0].age_in_years() }.
+buttons:
+  - Exit: exit
 ---
 question: |
   Thank you for using the Guardianship Assistant
@@ -342,6 +363,16 @@ fields:
   - code: |
       other_parties[i].name_fields()
 ---
+id: name of the caretaker
+sets:
+  - caretakers[i].name.first
+  - caretakers[i].name.last
+question: |
+  Name of ${ other_parties[0].familiar() }'s ${ ordinal(i) } caretaker
+fields:
+  - code: |
+      caretakers[i].name_fields()      
+---
 id: email
 question: |
   What is your email address?
@@ -351,9 +382,12 @@ fields:
 ---
 id: reason for guardianship
 question: |
-  Why do you need a guardianship?
+  What is your **interest** in getting a guardian for ${ other_parties.familiar() }?
 subquestion: |
-  Use your own words to briefly explain.
+  Use your own words to briefly explain why
+  **you** should be able to ask the court for a guardian. For example: explain
+  your relationship to ${ other_parties.familiar() } and your
+  responsibility for their safety.
 fields:
   - no label: Petitioner_interest_list
     datatype: area
@@ -374,8 +408,6 @@ id: Tell me more about Respondent
 question: |
   Information about ${ other_parties[0] }
 fields:
-  - When was ${ other_parties.familiar() } born?: other_parties[0].birthdate
-    datatype: date 
   - code: |
       other_parties[0].gender_fields()          
   - Primary Language: primary_language
@@ -404,6 +436,139 @@ objects:
   - parents: ALPeopleList
   - siblings: ALPeopleList.using(ask_number=True)
   - caretakers: ALPeopleList
+  - guardians: ALPeopleList
+  - nominated_guardian: ALPeopleList
+  - rep_payees: ALPeopleList
+  - healthcare_proxies: ALPeopleList
+  - durable_powers_of_attorney: ALPeopleList  
+  - person_with_care_or_custody: ALPeopleList  
+---
+sets:
+  - guardians[i].name.first
+  - guardians[i].name.last
+id: guardians
+question: |  
+  Name of ${ ordinal(i) } guardian
+fields:
+  - Existing person: nominated_guardian[i]
+    datatype: object
+    choices: relationship_people_choices
+    disable others: True
+  - code: |
+      guardians[i].name_fields()
+  - Phone number: guardians[i].phone_number
+    required: False
+  - code: |
+      guardians[i].address_fields()
+  - Is the ${ ordinal(i) } guardian a minor? (under 18): guardians[i].is_minor
+  - Is the ${ ordinal(i) } guardian incompetent?: guardians[i].is_incompetent
+  - Relationship to ${ other_parties.familiar() }: guardians[i].relationship
+---
+sets:
+  - nominated_guardian[i].name.first
+  - nominated_guardian[i].name.last
+id: nominated_guardian
+question: |
+  Name of ${ ordinal(i) } nominated_guardian
+fields:
+  - Existing person: nominated_guardian[i]
+    datatype: object
+    choices: relationship_people_choices
+    disable others: True      
+  - code: |
+      nominated_guardian[i].name_fields()
+  - code: |
+      nominated_guardian[i].address_fields()
+  - Phone number: nominated_guardian[i].phone_number
+    required: False
+  - Is the ${ ordinal(i) } nominated guardian a minor? (under 18): nominated_guardian[i].is_minor
+  - Is the ${ ordinal(i) } nominated guardian incompetent?: nominated_guardian[i].is_incompetent
+  - Relationship to ${ other_parties.familiar() }: nominated_guardian[i].relationship
+---
+sets:
+  - rep_payees[i].name.first
+  - rep_payees[i].name.last
+id: rep_payees
+question: |  
+  Name of ${ ordinal(i) } rep_payees
+fields:
+  - Existing person: rep_payees[i]
+    datatype: object
+    choices: relationship_people_choices
+    disable others: True
+  - code: |
+      rep_payees[i].name_fields()
+  - Phone number: rep_payees[i].phone_number
+    required: False
+  - code: |
+      rep_payees[i].address_fields()
+  - Is the ${ ordinal(i) } rep_payees a minor? (under 18): rep_payees[i].is_minor
+  - Is the ${ ordinal(i) } rep_payees incompetent?: rep_payees[i].is_incompetent
+  - Relationship to ${ other_parties.familiar() }: rep_payees[i].relationship
+---
+sets:
+  - healthcare_proxies[i].name.first
+  - healthcare_proxies[i].name.last
+id: healthcare_proxies
+question: |
+  Name of ${ ordinal(i) } healthcare_proxies
+fields:
+  - Existing person: nominated_guardian[i]
+    datatype: object
+    choices: relationship_people_choices
+    disable others: True      
+  - code: |
+      healthcare_proxies[i].name_fields()
+  - code: |
+      healthcare_proxies[i].address_fields()
+  - Phone number: healthcare_proxies[i].phone_number
+    required: False
+  - Is the ${ ordinal(i) } healthcare_proxies a minor? (under 18): healthcare_proxies[i].is_minor
+  - Is the ${ ordinal(i) } healthcare_proxies incompetent?: healthcare_proxies[i].is_incompetent
+  - Relationship to ${ other_parties.familiar() }: healthcare_proxies[i].relationship
+---
+sets:
+  - durable_powers_of_attorney[i].name.first
+  - durable_powers_of_attorney[i].name.last
+id: durable_powers_of_attorney
+question: |
+  Name of ${ ordinal(i) } durable_powers_of_attorney
+fields:
+  - Existing person: nominated_guardian[i]
+    datatype: object
+    choices: relationship_people_choices
+    disable others: True      
+  - code: |
+      durable_powers_of_attorney[i].name_fields()
+  - code: |
+      durable_powers_of_attorney[i].address_fields()
+  - Phone number: durable_powers_of_attorney[i].phone_number
+    required: False
+  - Is the ${ ordinal(i) } durable_powers_of_attorney a minor? (under 18): durable_powers_of_attorney[i].is_minor
+  - Is the ${ ordinal(i) } durable_powers_of_attorney incompetent?: durable_powers_of_attorney[i].is_incompetent
+  - Relationship to ${ other_parties.familiar() }: durable_powers_of_attorney[i].relationship
+---
+sets:
+  - person_with_care_or_custody[i].name.first
+  - person_with_care_or_custody[i].name.last
+id: person_with_care_or_custody
+question: |
+  Name of ${ ordinal(i) } person_with_care_or_custody
+fields:
+  - Existing person: person_with_care_or_custody[i]
+    datatype: object
+    choices: relationship_people_choices
+    disable others: True      
+  - code: |
+      person_with_care_or_custody[i].name_fields()
+  - code: |
+      person_with_care_or_custody[i].address_fields()
+  - Phone number: person_with_care_or_custody[i].phone_number
+    required: False
+  - Is the ${ ordinal(i) } person_with_care_or_custody a minor? (under 18): person_with_care_or_custody[i].is_minor
+  - Is the ${ ordinal(i) } person_with_care_or_custody incompetent?: person_with_care_or_custody[i].is_incompetent
+  - Relationship to ${ other_parties.familiar() }: person_with_care_or_custody[i].relationship
+
 ---
 id: relationships
 question: |
@@ -439,7 +604,7 @@ question: |
   Who is ${ other_parties.familiar() } married to?
 fields:
   - code: |
-      spouses[0].name_fields()
+      spouses[0].name_fields()      
 ---
 id: parents name
 sets:
@@ -496,7 +661,7 @@ sets:
   - other_parties[0].principal_residence.address
   - other_parties[0].principal_residence.city
 question: |
-  What is ${ other_parties.familiar() }'s **principal residence***?
+  What is ${ other_parties.familiar() }'s **principal residence**?
 subquestion: |
   This is normally where ${ other_parties.familiar() } **usually**
   lives.
@@ -524,65 +689,52 @@ fields:
   - Will ${ other_parties[0] } live here if the guardianship is granted?: Potential_Residence_same
     datatype: yesnoradio
 ---
-question: |
-  ${ other_parties[0] }'s Relationships
-subquestion: |
-  The following questions are about current relationships ${ other_parties[0] } has:
-fields:
-  - Do they have a current Guardian?: Current_Guardian
-    datatype: yesnomaybe
-  - Do they have a document, like a will, nominating a Guardian?: Current_GuardianDoc
-    datatype: yesnomaybe 
-  - Do they have a current Conservator?: Current_Conservator
-    datatype: yesnomaybe
-    help: |
-      The court may appoint a Conservator to manage the Respondent’s finances 
-      if the court determines the Respondent is unable to do so themselves. A 
-      Conservator is usually only appointed when the Respondent has more than 
-      $5,000 worth of money and assets.
-  - Do they have a Representative Payee?: RepPayee
-    datatype: yesnomaybe
-  - Do they have a Representative Health Care Agent or Proxy?: HealthProxy
-    datatype: yesnomaybe
-  - Do they have a Durable Power of Attorney?: DPA
-    datatype: yesnomaybe
----
-
 id: Respondent incapacity
 question: |
-  The following questions concern ${ other_parties[0] }'s incapacity.
+  ${ other_parties.familiar() }'s ability to make decisions
 fields:
- - Is ${ other_parties[0] } intellectually disabled: Respondent_intellectual_disabled
+ - Is ${ other_parties.familiar() } intellectually disabled?: Respondent_intellectual_disabled
    datatype: yesnoradio
- - Because you are alleging that ${ other_parties[0] } is NOT intellectually disabled, do you have a completed Medical Certificate?: MedCert_filed
+ - Do you have a completed Medical Certificate?: MedCert_filed
    datatype: yesnoradio
    show if:
      variable: Respondent_intellectual_disabled
      is: False
    help: |
-     The Medical Certificate must be based on an exam of ${other_parties[0]} within 30 days of filing
-     the Petition. An updated Medical Certificate, based on a new exam, is
-     required within 30 days of the hearing.
- - Because you are alleging that ${ other_parties[0] } is intellectually disabled, do you have a completed Clinical Team Report?: CTR_completed
+     If ${ other_parties.familiar() } is not intellectually disabled,
+     you need to get a medical certificate.
+     
+     The medical exam needs to be recent. Make sure it was within
+     the last 30 days.
+ - Do you have a completed Clinical Team Report?: CTR_completed
    datatype: yesnoradio
    show if: Respondent_intellectual_disabled
    help: |
-     The Clinical Team Report must be based on exams of ${ other_parties[0].name.first
-     } ${ other_parties[0].name.last } conducted within 180 days of filing the
-     Petition. If there is a chance the Clinical Team Report will be more than
-     180 days before filing the Petition, consider scheduling exams so that the
-     licensed psychologist, registered nurse, and licensed social worked can
-     issue a new Clincal Team Report.
- - Describe the nature and extent of ${ other_parties[0] }'s incapacity: Incapacity_reasons
+     If ${ other_parties.familiar() } is intellectually disabled,
+     you need a report from their clinical team. 
+     
+     The exam for the clinical team report needs to be within the last
+     180 days. You can get a new report from:
+     
+     - a licensed psychologist
+     - registered nurse
+     - licensed social worker
+ - How is ${ other_parties.familiar() } unable to make important decisions on their own? Be specific about what ${ other_parties.familiar() } can and cannot do.: Incapacity_reasons
    input type: area
+   label above field: True
    rows: 6
-   help: |
-       For example, they have limited verbal communication skills.
- - Why is a guardianship needed?: Guardianship_reasons
+ - Why does ${ other_parties.familiar() } need a guardian?: Guardianship_reasons
+   label above field: True
    input type: area
-   rows: 6
-   help: |
-     Explain in 1-3 sentences.
+   rows: 4
+---
+template: incapacity_reasons_template
+subject: |
+  What can I say?
+content: |
+  For example, you might explain that ${ other_parties.familiar() } 
+  is not able to talk.
+
 ---
 id: Review your form before you sign it
 continue button field: Guardianship_Assistant_preview_question
@@ -755,58 +907,43 @@ fields:
 ---
 id: Respondent s Relationships
 question: |
-  ${other_parties[0].name.first} 's Relationships
+  People who help care for ${ other_parties[0].familiar() }
 subquestion: |
-  The following questions are about current relationships ${other_parties[0].name.first} has:
+  Does ${ other_parties.familiar() } have any of the following?
+  Answer yes if the person who has the role is you **or** 
+  someone else.
+  
+  Check all that apply:
 fields:
-  - 'Current guardian attached': Current_Guardian_Attached
-    datatype: yesno
-  - 'Current guardian': Current_Guardian
-    datatype: yesno
-  - 'Current guardian uncertain': Current_Guardian_Uncertain
-    datatype: yesno
-  - 'Current guardian info': Current_Guardian_info
-    maxlength: 84
-  - 'Guardiandoc attached': GuardianDoc_attached
-    datatype: yesno
-  - 'Current guardiandoc': Current_GuardianDoc
-    datatype: yesno
-  - 'Guardiandoc uncertain': GuardianDoc_uncertain
-    datatype: yesno
-  - 'Current conservator attached': Current_Conservator_attached
-    datatype: yesno
-  - 'Current conservator': Current_Conservator
-    datatype: yesno
-  - 'Current conservator uncertain': Current_Conservator_uncertain
-    datatype: yesno
-  - 'Current conservator info': Current_Conservator_info
-    maxlength: 84
-  - 'Reppayee attached': RepPayee_attached
-    datatype: yesno
-  - 'Reppayee': RepPayee
-    datatype: yesno
-  - 'Reppayee uncertain': RepPayee_uncertain
-    datatype: yesno
-  - 'Reppayee info': RepPayee_info
-    maxlength: 84
-  - 'Healthproxy attached': HealthProxy_attached
-    datatype: yesno
-  - 'Healthproxy': HealthProxy
-    datatype: yesno
-  - 'Healthproxy uncertain': HealthProxy_uncertain
-    datatype: yesno
-  - 'Healthproxy info': HealthProxy_info
-    maxlength: 84
-  - 'Dpa attached': DPA_attached
-    datatype: yesno
-  - 'Dpa': DPA
-    datatype: yesno
-  - 'Dpa uncertain': DPA_uncertain
-    datatype: yesno
-  - 'Dpa info': DPA_info
-    maxlength: 84
+  - 'Currently appointed guardian': Current_Guardian
+    datatype: yesnomaybe
+  - 'A document nominating a guardian that has not been decided on': Current_GuardianDoc
+    datatype: yesnomaybe
+  - 'Conservator': Current_Conservator
+    datatype: yesnomaybe
+  - 'Representative payee for Social Security benefits': RepPayee
+    datatype: yesnomaybe
+  - 'Healthcare proxy': HealthProxy
+    datatype: yesnomaybe
+  - 'Durable power of attorney': DPA
+    datatype: yesnomaybe
 ---
-id: Tell me about ${ other_parties[0].familiar() } s finances
+code: |
+  guardians.there_are_any = Current_Guardian
+---
+code: |
+  nominated_guardian.there_are_any = Current_GuardianDoc
+---
+code: |
+  rep_payees.there_are_any = RepPayee
+---
+code: |
+  healthcare_proxies.there_are_any = HealthProxy
+---
+code: |
+  durable_powers_of_attorney.there_are_any = DPA
+---
+id: Tell me about finances
 question: |
   Tell me about ${ other_parties[0].familiar() }'s finances.
 fields:
@@ -861,13 +998,25 @@ fields:
     maxlength: 22
     show if: Has_Income
 ---
+id: person who is guardian
+question: |
+  Who do you want to be ${ other_parties.familiar() }'s guardian?
+fields:
+  - no label: guardian_who_is
+    datatype: radio
+    choices:
+      - Me (${ users[0]}): petitioner
+      - A specific person who is not me: someone_else
+      - Someone else the court chooses: suitable_person
+      
+---
 id: Tell me more about who should be appointed guardian
 question: |
-  Tell me more about who should be appointed guardian.
+  Tell me more about who should be appointed guardian
 fields:
   - 'Is the proposed guardian ${ users[0] } ?': Petitioner_appointee
     datatype: yesnoradio
-  - 'Is there a specific person you want the court to appoint as guardian for ${ other_parties[0].name.full }': Other_appointee_yes
+  - 'Is there a specific person you want the court to appoint as guardian for ${ other_parties[0] }': Other_appointee_yes
     datatype: yesno
     show if: petitioner_appointee 
   - 'First Name': Guardian.name.first
@@ -875,8 +1024,6 @@ fields:
     maxlength: 16
   - 'Address': Guardian.address.address
     maxlength: 28
-  - "What is ${ Guardian.familiar() }'s relationship to ${other_parties[0].name.full }?": Guardian_relationship
-    maxlength: 24
   - 'Guardian poa': guardian_poa_yes
     datatype: yesno
   - 'Guardian parent': guardian_parent_yes
@@ -903,6 +1050,13 @@ fields:
     maxlength: 30
   - 'Other appointee yes 1': Other_appointee_yes_1
     datatype: yesno
+---
+id: guardian relationship
+question: |
+  How is ${ Guardian.familiar() }'s related to ${ other_parties.familiar() }?
+fields:  
+  - no label: Guardian_relationship
+    maxlength: 24
 ---
 id: Would you like the court to consider appointing a co guardian
 question: |
@@ -1227,43 +1381,43 @@ attachment:
       - "Current_Guardian_attached_no": ${ not Current_Guardian_Attached }
       - "Current_Guardian_yes": ${ Current_Guardian }
       - "Current_Guardian_no": ${ not Current_Guardian }
-      - "Current_Guardian_Uncertain": ${ Current_Guardian_Uncertain }
+      - "Current_Guardian_Uncertain": ${ Current_Guardian is None }
       - "Current_Guardian_info": ${ Current_Guardian_info }
       - "GuardianDoc_attached_yes": ${ GuardianDoc_attached }
       - "GuardianDoc_attached_no": ${ not GuardianDoc_attached }
       - "Current_GuardianDoc_yes": ${ Current_GuardianDoc }
       - "Current_GuardianDoc_no": ${ not Current_GuardianDoc }
-      - "GuardianDoc_uncertain": ${ GuardianDoc_uncertain }
+      - "GuardianDoc_uncertain": ${ GuardianDoc is None }
       - "Nominated_Guardian_info": ${ Nominated_Guardian_info }
       - "Current_Conservator_attached_yes": ${ Current_Conservator_attached }
       - "Current_Conservator_attached_no": ${ not Current_Conservator_attached }
       - "Current_Conservator_yes": ${ Current_Conservator }
       - "Current_Conservator_no": ${ not Current_Conservator }
-      - "Current_Conservator_uncertain": ${ Current_Conservator_uncertain }
+      - "Current_Conservator_uncertain": ${ Current_Conservator is None }
       - "Current_Conservator_info": ${ Current_Conservator_info }
       - "RepPayee_attached_yes": ${ RepPayee_attached }
       - "RepPayee_attached_no": ${ not RepPayee_attached }
       - "RepPayee_yes": ${ RepPayee }
       - "RepPayee_no": ${ not RepPayee }
-      - "RepPayee_uncertain": ${ RepPayee_uncertain }
+      - "RepPayee_uncertain": ${ RepPayee is None }
       - "RepPayee_info": ${ RepPayee_info }
       - "HealthProxy_attached_yes": ${ HealthProxy_attached }
       - "HealthProxy_attached_no": ${ not HealthProxy_attached }
       - "HealthProxy_yes": ${ HealthProxy }
       - "HealthProxy_no": ${ not HealthProxy }
-      - "HealthProxy_uncertain": ${ HealthProxy_uncertain }
+      - "HealthProxy_uncertain": ${ HealthProxy is None }
       - "HealthProxy_info": ${ HealthProxy_info }
       - "DPA_attached_yes": ${ DPA_attached }
       - "DPA_attached_no": ${ not DPA_attached }
       - "DPA_yes": ${ DPA }
       - "DPA_no": ${ not DPA }
-      - "DPA_uncertain": ${ DPA_uncertain }
+      - "DPA_uncertain": ${ DPA is None }
       - "DPA_info": ${ DPA_info }
       - "RespondentMOLST_yes": ${ RespondentMOLST }
       - "RespondentMOLST_no": ${ not RespondentMOLST }
       - "RespondentVA_yes": ${ RespondentVA }
       - "RespondentVA_no": ${ not RespondentVA }
-      - "RespondentVA_uncertain": ${ RespondentVA_uncertain }
+      - "RespondentVA_uncertain": ${ RespondentVA is None }
       - "Has_Assets_uncertain": ${ Has_Assets is None }
       - "Has_Assets_yes": ${ Has_Assets }
       - "Has_Assets_no": ${ not Has_Assets }
@@ -1313,7 +1467,7 @@ attachment:
       - "Petitioner_Signature": ${ users[0].signature_if_final(i) }
       - "Copetitioner_Signature": ${ users[1].signature_if_final(i) }
       - "Attorney_signature": ${ Attorney.signature_if_final(i) }
-# ---
+---
 # id: Guardianship_Assistant review screen
 # event: review_Guardianship_Assistant
 # question: |
