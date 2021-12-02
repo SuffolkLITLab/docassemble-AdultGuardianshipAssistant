@@ -114,7 +114,12 @@ code: |
   caretakers.gather()
   children.gather()
   Respondent_address_date
-  Current_Guardian
+  guardians.gather()
+  nominated_guardian.gather()
+  rep_payees.gather()
+  healthcare_proxies.gather()
+  durable_powers_of_attorney.gather()
+  person_with_care_or_custody.gather()
   Guardian_relationship
   set_progress(9.09)  
   Has_Assets
@@ -441,7 +446,24 @@ objects:
   - rep_payees: ALPeopleList
   - healthcare_proxies: ALPeopleList
   - durable_powers_of_attorney: ALPeopleList  
-  - person_with_care_or_custody: ALPeopleList  
+  - person_with_care_or_custody: ALPeopleList
+  - relationship_people_choices: DAList.using(auto_gather=False)
+---
+reconsider: True
+code: |
+  relationship_people_choices.clear()
+  relationship_people_choices.extend(guardians.complete_elements())  
+  relationship_people_choices.extend(spouses.complete_elements())
+  relationship_people_choices.extend(parents.complete_elements())
+  relationship_people_choices.extend(siblings.complete_elements())
+  relationship_people_choices.extend(caretakers.complete_elements())
+  relationship_people_choices.extend(nominated_guardian.complete_elements())
+  relationship_people_choices.extend(rep_payees.complete_elements())
+  relationship_people_choices.extend(healthcare_proxies.complete_elements())
+  relationship_people_choices.extend(durable_powers_of_attorney.complete_elements())
+  relationship_people_choices.extend(person_with_care_or_custody.complete_elements())
+  relationship_people_choices.extend(relationship_people_choices.complete_elements())
+  relationship_people_choices.gathered = True
 ---
 sets:
   - guardians[i].name.first
@@ -450,7 +472,7 @@ id: guardians
 question: |  
   Name of ${ ordinal(i) } guardian
 fields:
-  - Existing person: nominated_guardian[i]
+  - Existing person: guardians[i]
     datatype: object
     choices: relationship_people_choices
     disable others: True
@@ -513,7 +535,7 @@ id: healthcare_proxies
 question: |
   Name of ${ ordinal(i) } healthcare_proxies
 fields:
-  - Existing person: nominated_guardian[i]
+  - Existing person: healthcare_proxies[i]
     datatype: object
     choices: relationship_people_choices
     disable others: True      
@@ -534,7 +556,7 @@ id: durable_powers_of_attorney
 question: |
   Name of ${ ordinal(i) } durable_powers_of_attorney
 fields:
-  - Existing person: nominated_guardian[i]
+  - Existing person: durable_powers_of_attorney[i]
     datatype: object
     choices: relationship_people_choices
     disable others: True      
@@ -910,8 +932,8 @@ question: |
   People who help care for ${ other_parties[0].familiar() }
 subquestion: |
   Does ${ other_parties.familiar() } have any of the following?
-  Answer yes if the person who has the role is you **or** 
-  someone else.
+  Answer yes if any person, including you, had that role. Someone
+  may play more than one role in ${ other_parties.familiar() }'s life.
   
   Check all that apply:
 fields:
@@ -926,6 +948,8 @@ fields:
   - 'Healthcare proxy': HealthProxy
     datatype: yesnomaybe
   - 'Durable power of attorney': DPA
+    datatype: yesnomaybe
+  - Any person who had care or custody of ${ other_parties.familiar() } within the last 60 days: person_with_care_or_custody.there_are_any
     datatype: yesnomaybe
 ---
 code: |
