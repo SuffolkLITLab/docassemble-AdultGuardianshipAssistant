@@ -12,7 +12,7 @@ code: |
   # Set the allowed courts for this interview
   user_role = 'plaintiff'
   Temporary_guardianship_reasons
-  County
+  trial_court
   Bond_WithSureties
   Respondent
   users[0].name.first
@@ -58,8 +58,6 @@ id: Tell us about the Respodent
 question: |
   Tell us about the Respodent
 fields:
-  - 'County': County
-    maxlength: 27
   - 'Does Respondent have a Healthcare Proxy?': Has_HealthProxy
     datatype: yesno
   - 'I do not know if the Respondent has a Healthcare Proxy': Has_HealthProxy_uncertain
@@ -141,7 +139,7 @@ attachment:
       - "TempGuardian_name_first": ${ TempGuardian.name.first }
       - "Petitioner_name_last": ${ users[0].name.last }
       - "Petitioner_name_middle_initial": ${ users[0].name.middle_initial() }
-      - "County": ${ County }
+      - "County": ${ trial_court.address.county }
       - "Temporary_guardianship_reasons": ${ Temporary_guardianship_reasons }
       - "Temporary_guardianship_harm_avoided": ${ Temporary_guardianship_harm_avoided }
       - "Temporary_guardianship_Actions_needed": ${ Temporary_guardianship_Actions_needed }

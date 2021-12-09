@@ -5,11 +5,14 @@ include:
   - mpc320-verified-motion-for-appt-temp-guardian-for-incapacitated-person.yml
   - mpc825-treatment-plan.yml
 ---
+features:
+  bootstrap theme: bootstrap.min.css
+---
 comment: |
   The metadata section controls the tab title and saved interview title. You can delete this section if you include this YAML file in another YAML file.
 metadata:
   title: |
-    Request a Guardanship for an Adult
+    Adult Guardianship Assistant
   short title: |
     Guardianship Assistant
   tags:
@@ -56,6 +59,18 @@ objects:
   - other_parties: ALPeopleList.using(ask_number=True, target_number=1)  
   - Guardian: ALIndividual
   - Attorney: ALIndividual
+  - spouses: ALPeopleList.using(ask_number=True,complete_attribute="complete_table_9")
+  - children: ALPeopleList.using(ask_number=True,complete_attribute="complete_table_9")
+  - parents: ALPeopleList
+  - siblings: ALPeopleList.using(ask_number=True)
+  - caretakers: ALPeopleList.using(complete_attribute="complete_table_9")
+  - guardians: ALPeopleList.using(complete_attribute="complete_table_9")
+  - nominated_guardian: ALPeopleList.using(complete_attribute="complete_table_9")
+  - rep_payees: ALPeopleList.using(complete_attribute="complete_table_9")
+  - healthcare_proxies: ALPeopleList.using(complete_attribute="complete_table_9")
+  - durable_powers_of_attorney: ALPeopleList.using(complete_attribute="complete_table_9")  
+  - person_with_care_or_custody: ALPeopleList.using(complete_attribute="complete_table_9")
+  - relationship_people_choices: DAList.using(auto_gather=False)  
 ---
 objects:
   - other_parties[0].new_address: ALAddress  
@@ -124,10 +139,17 @@ code: |
   set_progress(9.09)  
   Has_Assets
   Petitioner_appointee
+  if not Petitioner_appointee and Other_appointee_yes:
+    Guardian.name.last
+    Guardian.address.address
+    Guardian.address.address
+    Guardian.email
+    Guardian.address.city
+    Guardian.name.first    
   set_progress(18.18)
-  Limited_Guardian_yes
-  subJudgment_yes
-  County
+  guardianship_type
+  Nursing_facility_yes
+  trial_court
   Bond_Waiver_yes
   Petition_Assetattachment_yes
   set_progress(27.27)
@@ -136,31 +158,22 @@ code: |
   Attorney.address.address
   set_progress(36.36)
   Attorney.phone_number
-  Guardian.address.address
   set_progress(45.45)
   Attorney.address.city
   other_parties[0].gender
-  Guardian.phone_number
   Attorney.address.address
-  set_progress(54.55)
-  Guardian.name.last
+  set_progress(54.55)  
   coguardian_attachment_yes
   if coguardian_attachment_yes:
     coguardian_name_first
     CoGuardian_relationship
   other_parties[0].name.last
   users[0].address.address
-  Guardian.address.address
-  users[0].name.last
-  set_progress(63.64)
-  Guardian.address.address
-  Guardian.email
   users[0].name.first
+  set_progress(63.64)
   users[0].phone_number
   set_progress(72.73)
   Attorney.email
-  Guardian.address.city
-  Guardian.name.first
   # TODO add conditional logic if we don't need the form
   interview_order_Bond_MPC_801
   interview_order_mpc320verifiedmotionforappttempguardianforincapacitatedperson
@@ -435,19 +448,7 @@ fields:
       please visit: https://www.molst-ma.org/.
   - Does ${ other_parties.familiar() } qualify to get benefits from the Veteran's Authority?: RespondentVA
     datatype: yesnomaybe
----
-objects:
-  - spouses: ALPeopleList.using(ask_number=True)
-  - parents: ALPeopleList
-  - siblings: ALPeopleList.using(ask_number=True)
-  - caretakers: ALPeopleList
-  - guardians: ALPeopleList
-  - nominated_guardian: ALPeopleList
-  - rep_payees: ALPeopleList
-  - healthcare_proxies: ALPeopleList
-  - durable_powers_of_attorney: ALPeopleList  
-  - person_with_care_or_custody: ALPeopleList
-  - relationship_people_choices: DAList.using(auto_gather=False)
+
 ---
 reconsider: True
 code: |
@@ -476,6 +477,8 @@ fields:
     datatype: object
     choices: relationship_people_choices
     disable others: True
+    exclude:
+      - guardians.complete_elements()
   - code: |
       guardians[i].name_fields()
   - Phone number: guardians[i].phone_number
@@ -485,6 +488,33 @@ fields:
   - Is the ${ ordinal(i) } guardian a minor? (under 18): guardians[i].is_minor
   - Is the ${ ordinal(i) } guardian incompetent?: guardians[i].is_incompetent
   - Relationship to ${ other_parties.familiar() }: guardians[i].relationship
+---
+generic object: ALIndividual
+code: |
+  x.name.first
+  x.phone_number
+  x.is_minor
+  x.is_incompetent
+  x.address.address
+  x.relationship
+  x.complete_table_9 = True
+---
+sets:
+  - x.address.address
+generic object: ALIndividual
+id: more info about a person
+question: |
+  More information about ${ x }
+fields:
+  - Phone number: x.phone_number
+    required: False
+  - code: |
+      x.address_fields()
+  - Is ${x.familiar()} a minor? (under 18): x.is_minor
+    datatype: yesno
+  - Is ${x.familiar()} incompetent?: x.is_incompetent
+    datatype: yesno
+  - Relationship to ${ other_parties.familiar() }: x.relationship
 ---
 sets:
   - nominated_guardian[i].name.first
@@ -497,6 +527,8 @@ fields:
     datatype: object
     choices: relationship_people_choices
     disable others: True      
+    exclude:
+      - nominated_guardian.complete_elements()    
   - code: |
       nominated_guardian[i].name_fields()
   - code: |
@@ -504,7 +536,9 @@ fields:
   - Phone number: nominated_guardian[i].phone_number
     required: False
   - Is the ${ ordinal(i) } nominated guardian a minor? (under 18): nominated_guardian[i].is_minor
+    datatype: yesno
   - Is the ${ ordinal(i) } nominated guardian incompetent?: nominated_guardian[i].is_incompetent
+    datatype: yesno
   - Relationship to ${ other_parties.familiar() }: nominated_guardian[i].relationship
 ---
 sets:
@@ -518,6 +552,8 @@ fields:
     datatype: object
     choices: relationship_people_choices
     disable others: True
+    exclude:
+      - rep_payees.complete_elements()    
   - code: |
       rep_payees[i].name_fields()
   - Phone number: rep_payees[i].phone_number
@@ -525,7 +561,9 @@ fields:
   - code: |
       rep_payees[i].address_fields()
   - Is the ${ ordinal(i) } rep_payees a minor? (under 18): rep_payees[i].is_minor
+    datatype: yesno
   - Is the ${ ordinal(i) } rep_payees incompetent?: rep_payees[i].is_incompetent
+    datatype: yesno
   - Relationship to ${ other_parties.familiar() }: rep_payees[i].relationship
 ---
 sets:
@@ -538,7 +576,9 @@ fields:
   - Existing person: healthcare_proxies[i]
     datatype: object
     choices: relationship_people_choices
-    disable others: True      
+    disable others: True
+    exclude:
+      - healthcare_proxies.complete_elements()    
   - code: |
       healthcare_proxies[i].name_fields()
   - code: |
@@ -546,7 +586,9 @@ fields:
   - Phone number: healthcare_proxies[i].phone_number
     required: False
   - Is the ${ ordinal(i) } healthcare_proxies a minor? (under 18): healthcare_proxies[i].is_minor
+    datatype: yesno
   - Is the ${ ordinal(i) } healthcare_proxies incompetent?: healthcare_proxies[i].is_incompetent
+    datatype: yesno
   - Relationship to ${ other_parties.familiar() }: healthcare_proxies[i].relationship
 ---
 sets:
@@ -554,20 +596,24 @@ sets:
   - durable_powers_of_attorney[i].name.last
 id: durable_powers_of_attorney
 question: |
-  Name of ${ ordinal(i) } durable_powers_of_attorney
+  Name of ${ ordinal(i) } person with a durable power of attorney for ${ other_parties.familiar() }
 fields:
   - Existing person: durable_powers_of_attorney[i]
     datatype: object
     choices: relationship_people_choices
-    disable others: True      
+    disable others: True
+    exclude:
+      - durable_powers_of_attorney.complete_elements()    
   - code: |
       durable_powers_of_attorney[i].name_fields()
   - code: |
       durable_powers_of_attorney[i].address_fields()
   - Phone number: durable_powers_of_attorney[i].phone_number
     required: False
-  - Is the ${ ordinal(i) } durable_powers_of_attorney a minor? (under 18): durable_powers_of_attorney[i].is_minor
-  - Is the ${ ordinal(i) } durable_powers_of_attorney incompetent?: durable_powers_of_attorney[i].is_incompetent
+  - Is the ${ ordinal(i) } person with a durable power of attorney a minor? (under 18): durable_powers_of_attorney[i].is_minor
+    datatype: yesno
+  - Is the ${ ordinal(i) } person with a durable power of attorney incompetent?: durable_powers_of_attorney[i].is_incompetent
+    datatype: yesno  
   - Relationship to ${ other_parties.familiar() }: durable_powers_of_attorney[i].relationship
 ---
 sets:
@@ -580,7 +626,9 @@ fields:
   - Existing person: person_with_care_or_custody[i]
     datatype: object
     choices: relationship_people_choices
-    disable others: True      
+    disable others: True
+    exclude:
+      - person_with_care_or_custody.complete_elements()    
   - code: |
       person_with_care_or_custody[i].name_fields()
   - code: |
@@ -588,7 +636,9 @@ fields:
   - Phone number: person_with_care_or_custody[i].phone_number
     required: False
   - Is the ${ ordinal(i) } person_with_care_or_custody a minor? (under 18): person_with_care_or_custody[i].is_minor
+    datatype: yesno
   - Is the ${ ordinal(i) } person_with_care_or_custody incompetent?: person_with_care_or_custody[i].is_incompetent
+    datatype: yesno  
   - Relationship to ${ other_parties.familiar() }: person_with_care_or_custody[i].relationship
 
 ---
@@ -932,7 +982,7 @@ question: |
   People who help care for ${ other_parties[0].familiar() }
 subquestion: |
   Does ${ other_parties.familiar() } have any of the following?
-  Answer yes if any person, including you, had that role. Someone
+  Answer yes if any person, including you, has that role. Someone
   may play more than one role in ${ other_parties.familiar() }'s life.
   
   Check all that apply:
@@ -1036,24 +1086,65 @@ fields:
 ---
 id: Tell me more about who should be appointed guardian
 question: |
-  Tell me more about who should be appointed guardian
+  Who should the judge to appoint as guardian?
 fields:
-  - 'Is the proposed guardian ${ users[0] } ?': Petitioner_appointee
+  - Do you want the judge to appoint **you** as the guardian?: Petitioner_appointee
     datatype: yesnoradio
-  - 'Is there a specific person you want the court to appoint as guardian for ${ other_parties[0] }': Other_appointee_yes
-    datatype: yesno
-    show if: petitioner_appointee 
+  - Is there a **specific person** that you want the judge to appoint?: Other_appointee_yes
+    datatype: yesnoradio
+    show if: 
+      variable: Petitioner_appointee 
+      is: False
+  - note: |
+      **Okay**. In that case, this form will ask the judge to appoint a 
+      **suitable person**. The judge may choose a name from a list of people who
+      are qualified and have told the court they are willing to be guardians in
+      cases like this one.
+    show if:
+      variable: Other_appointee_yes
+      is: False
   - 'First Name': Guardian.name.first
+    show if: Other_appointee_yes
   - 'Middle Name': Guardian.name.middle
     maxlength: 16
+    show if: Other_appointee_yes
+  - 'Last name': Guardian.name.last
+    maxlength: 60
+    show if: Other_appointee_yes    
   - 'Address': Guardian.address.address
     maxlength: 28
-  - 'Guardian poa': guardian_poa_yes
+    show if: Other_appointee_yes
+  - note: |
+      **Why** should the person you listed get priority to be 
+      ${ other_parties.familiar() }'s guardian?
+      
+      Check any that apply.
+    js show if: |
+      val("Petitioner_appointee") || val("Other_appointee_yes")
+  - They have a **power of attorney** over ${ other_parties.familiar() }: guardian_poa_yes
     datatype: yesno
-  - 'Guardian parent': guardian_parent_yes
+    js show if: |
+      val("Petitioner_appointee") || val("Other_appointee_yes")    
+  - They are ${ other_parties.familiar() }'s **parent**: guardian_parent_yes
     datatype: yesno
-  - 'Guardian spouse': guardian_spouse_yes
+    js show if: |
+      val("Petitioner_appointee") || val("Other_appointee_yes")    
+  - They are **married** to ${ other_parties.familiar() }: guardian_spouse_yes
     datatype: yesno
+    js show if: |
+      val("Petitioner_appointee") || val("Other_appointee_yes")    
+  - They should be chosen as the guardian because: guardian_priority_of_appointment_explanation
+    datatype: area
+    maxlength: 400
+    help: |
+      Write a reason that explains why this person is the right person to be 
+      chosen as guardian. You do not need to explain why a guardianship is needed.
+    js show if: |
+      val("Petitioner_appointee") || val("Other_appointee_yes")      
+---
+question: |
+  ...
+fields:  
   - 'Guardian appointee not listed': guardian_appointee_not_listed_yes
     datatype: yesno
   - 'Other appointment': Other_appointment_yes
@@ -1062,22 +1153,10 @@ fields:
     maxlength: 265
   - 'Nominated guardian info': Nominated_Guardian_info
     maxlength: 84
-  - 'Petitioner appointed yes 1': Petitioner_appointed_yes_1
-    datatype: yesno
-  - 'Petitioner appointee no 1': Petitioner_appointee_no_1
-    datatype: yesno
-  - 'Guardian name last 1': Guardian.name.last
-    maxlength: 60
-  - 'Guardian name first 1': Guardian.name.first
-    maxlength: 58
-  - 'Guardian name mi 1': Guardian.name.middle
-    maxlength: 30
-  - 'Other appointee yes 1': Other_appointee_yes_1
-    datatype: yesno
 ---
 id: guardian relationship
 question: |
-  How is ${ Guardian.familiar() }'s related to ${ other_parties.familiar() }?
+  How is ${ Guardian.familiar() } related to ${ other_parties.familiar() }?
 fields:  
   - no label: Guardian_relationship
     maxlength: 24
@@ -1111,77 +1190,103 @@ Fields:
   - Relationship to ${ other_parties[0].name.first}: CoGuardian_relationship
   - Reasons that ${ coguardian_name_first } should be appointed co-guardian: CoGuardian_reasons
 ---
-id: What type of guardianship is being sought
+id: kind of guardianship
 question: |
-  What type of guardianship is being sought?
+  What kind of guardianship does ${ other_parties.familiar() } need?
 subquestion: |
-  A limited guardian only has power to make decisions about specific aspects of Respondent's life. There will be follow-up questions asking about what limited authority you are seeking. *preferred by the courts*
+  You can ask for a **limited guardianship** or a **general guardianship**.
   
-  A general guardian has power to make decisions regarding Respondent's support, care, education, health and welfare.
+  You need a good reason to ask for a **general** guardianship. A **general**
+  guardian has complete legal control over the person who is being protected. If
+  the ${ other_parties.familiar() } can make at least some decisions for themselves
+  with help or support, or can express some of their own opinions and preferences
+  with help or support, ask for a **limited** guardianship.
 fields:
-  - 'Limited guardian': Limited_Guardian_yes
-    datatype: yesno
+  - Kind of guardianship: guardianship_type
+    datatype: radio
+    choices:
+      - "**Limited** guardianship (recommended)": limited
+      - "**General** guardianship": general
+  - note: |
+      What powers should the guardian have?
   - 'Insurance benefits': insurance_benefits_yes
     datatype: yesno
+    show if:
+      variable: guardianship_type
+      is: limited
   - 'Financial records': financial_records_yes
+    datatype: yesno  
+    show if:
+      variable: guardianship_type
+      is: limited
+  - Other: Other_appointment_yes
     datatype: yesno
-  - 'General guardian': General_Guardian_yes
-    datatype: yesno
-  - 'General guardianship reasons': General_Guardianship_reasons
+    show if:
+      variable: guardianship_type
+      is: limited
+  - Other powers: Other_appointment
+    show if: Other_appointment_yes
+    datatype: area
+    maxlength: 320
+  - label: |
+      **Why** do you need a **general** guardianship?
+      Be specific about why the guardian should have complete control
+      over ${ other_parties.familiar() } and ${ other_parties.familiar() } is
+      unable to make decisions for themselves even with help or support.
+    field: General_Guardianship_reasons
+    datatype: area
     maxlength: 178
-  - 'Limited guardian yes 2': Limited_Guardian_yes_2
+    label above field: True
+    show if: 
+      variable: guardianship_type
+      is: general
+  - note: |    
+      Do you need the judge to make any of the orders below?
+  - To admit ${ other_parties.familiar() } to a nursing facility: Nursing_facility_yes
     datatype: yesno
-  - 'General guardian yes 2': General_Guardian_yes_2
+  - To revoke ${ other_parties.familiar() }'s healthcare proxy: Revoke_healthproxy_yes
+    datatype: yesno    
+  - To treat ${ other_parties.familiar() } with anti-psychotic medication: antipsychotic_meds_yes
     datatype: yesno
-  - 'Additional request': Additional_request_yes
-    datatype: yesno
-  - 'Additional requests': Additional_requests
-    maxlength: 108
----
-id: Additional court authorization
-question: |
-  Additional court authorization
-subquestion: |
-  Will the guardian make decisions about any of the following (check all that apply)?
-fields:
-  - 'Subjudgment': subJudgment_yes
-    datatype: yesno
-  - 'Nursing facility': Nursing_facility_yes
-    datatype: yesno
-  - 'Antipsychotic meds': antipsychotic_meds_yes
-    datatype: yesno
-  - 'Other treatment': other_treatment_yes
-    datatype: yesno
+  - For another treatment or action which may require the judge to substitute their judgment for another person's: other_treatment_yes
+    datatype: yesno 
   - 'Substituted judgment reasons': substituted_Judgment_reasons
     maxlength: 219
-  - 'Revoke healthproxy': Revoke_healthproxy_yes
+    show if: other_treatment_yes
+  - To waive surety on the bond: Bond_Waiver_yes
     datatype: yesno
+  - Why should the judge waive surety on the bond?: surety_waiver_reasons
+    datatype: checkboxes
+    show if: Bond_Waiver_yes
+    choices:
+      - ${ other_parties.familiar() } does not have very much money. ${ other_parties.familiar() } cannot afford surety.: Respondent_minimalfunds_yes
+      - ${ other_parties.familiar() } has a conservator, or someone has asked for a conservator to be appointed: Conservator_requested_yes
+      - Other reason: other
+    none of the above: False
+  - Other reason to waive surety: Other_Bondwaiver 
+    datatype: area
+    rows: 2
+    maxlength: 160
+    show if: surety_waiver_reasons['other']
+  - Is there anything **else** you need to ask the judge to order?: Additional_request_yes
+    datatype: yesno
+  - What other order do you need?: Additional_requests
+    maxlength: 108
+    datatype: area
+    show if: Additional_request_yes
+---
+comment: |
   - 'Conservator requested': Conservator_requested_yes
     datatype: yesno
 ---
-id: Where will you file this petition
-question: |
-  Where will you file this petition?
-subquestion: |
-  Guardianship Petitions are filed in the Probate and Family Court of the county where Kevin Montoya currently lives, which can be found using the Massachusetts's Courthouse Locator.
-fields:
-  - 'County': County
-    maxlength: 27
----
-id: Would you like to file a Bond Waiver
-question: |
-  Would you like to file a Bond Waiver?
-subquestion: |
-  A bond is an obligation to pay a fixed amount (surities) in the event of embezzlement or fraud by the Guardian. If the Respondent has minimal funds, you can request that the court waive the payment.
-fields:
-  - 'Bond waiver': Bond_Waiver_yes
-    datatype: yesno
-  - 'Respondent minimalfunds': Respondent_minimalfunds_yes
-    datatype: yesno
-  - 'Other bondwaiver': Other_bondwaiver_yes
-    datatype: yesno
-  - 'Other bondwaiver': Other_Bondwaiver
-    maxlength: 216
+#id: Where will you file this petition
+#question: |
+#  Where will you file this petition?
+#subquestion: |
+#  Guardianship Petitions are filed in the Probate and Family Court of the county where Kevin Montoya currently lives, which can be found using the Massachusetts's Courthouse Locator.
+#fields:
+#  - 'County': County
+#    maxlength: 27
 ---
 # TODO - remove these fields from the actual PDF and then delete this section.
 id: REMOVE THESE FIELDS
@@ -1231,7 +1336,7 @@ subquestion: |
   ${ al_user_bundle.send_button_html() }
 ---
 objects:
-  - Guardianship_Assistant_attachment: ALDocument.using(title="The Adult Guardianship Assistant provides information on adult guardianship in Massachusetts and guides users in filling out court forms.", filename="Guardianship Assistant", enabled=True, has_addendum=False)
+  - Guardianship_Assistant_attachment: ALDocument.using(title="Guardianship Petition", filename="guardianship_petition", enabled=True, has_addendum=False)
 ---
 # TODO list all attachments 
 objects:
@@ -1285,7 +1390,7 @@ attachment:
       - "Guardian_name_first": ${ Guardian.name.first }
       - "Attorney_address_unit": ${ Attorney.address.unit }
       - "Attorney_name": ${ Attorney }
-      - "County": ${ County }
+      - "County": ${ trial_court.address.county }
       - "Respondent_name_middleinitial": ${ other_parties[0].name.middle_initial() }
       - "Language_english_yes": ${ primary_language == 'English' }
       - "Langauge_other_yes": ${ primary_language == 'Other' }
@@ -1336,12 +1441,18 @@ attachment:
       - "guardian_parent_yes": ${ guardian_parent_yes }
       - "guardian_spouse_yes": ${ guardian_spouse_yes }
       - "guardian_appointee_not_listed_yes": ${ guardian_appointee_not_listed_yes }
-      - "Limited_Guardian_yes": ${ Limited_Guardian_yes }
-      - "insurance_benefits_yes": ${ insurance_benefits_yes }
-      - "financial_records_yes": ${ financial_records_yes }
+      - "Limited_Guardian_yes": ${ guardianship_type == "limited" }
+      - "insurance_benefits_yes": |
+          % if guardianship_type == "limited":
+          ${ insurance_benefits_yes }
+          % endif
+      - "financial_records_yes": |
+          % if guardianship_type == "limited":
+          ${ financial_records_yes }
+          % endif
       - "Other_appointment_yes": ${ Other_appointment_yes }
       - "Other_appointment": ${ Other_appointment }
-      - "General_Guardian_yes": ${ General_Guardian_yes }
+      - "General_Guardian_yes": ${ guardianship_type == "general" }
       - "General_Guardianship_reasons": ${ General_Guardianship_reasons }
       - "MedCert_filed_yes": ${ MedCert_filed }
       - "MedCert_filed_no": ${ not MedCert_filed }
@@ -1460,7 +1571,7 @@ attachment:
       - "Respondent_Income2_value": ${ Respondent_Income2_value }
       - "Respondent_Income2_total": ${ Respondent_Income2_total }
       - "Respondent_income_attachment_yes": ${ Respondent_income_attachment_yes }
-      - "subJudgment_yes": ${ subJudgment_yes }
+      - "additional_specific_court_authorization": ${ Nursing_facility_yes or antipsychotic_meds_yes or other_treatment_yes or Revoke_healthproxy_yes }
       - "Nursing_facility_yes": ${ Nursing_facility_yes }
       - "antipsychotic_meds_yes": ${ antipsychotic_meds_yes }
       - "other_treatment_yes": ${ other_treatment_yes }
@@ -1475,10 +1586,19 @@ attachment:
       - "Limited_Guardian_yes_2": ${ Limited_Guardian_yes_2 }
       - "General_Guardian_yes_2": ${ General_Guardian_yes_2 }
       - "Bond_Waiver_yes": ${ Bond_Waiver_yes }
-      - "Respondent_minimalfunds_yes": ${ Respondent_minimalfunds_yes }
-      - "Conservator_requested_yes": ${ Conservator_requested_yes }
-      - "Other_bondwaiver_yes": ${ Other_bondwaiver_yes }
-      - "Other_Bondwaiver": ${ Other_Bondwaiver }
+      - "Respondent_minimalfunds_yes": ${ surety_waiver_reasons['Respondent_minimalfunds_yes'] }
+      - "Conservator_requested_yes": |
+          % if Bond_Waiver_yes:
+          ${ surety_waiver_reasons['Conservator_requested_yes'] }
+          % endif
+      - "Other_bondwaiver_yes": |
+          % if Bond_Waiver_yes:
+          ${ surety_waiver_reasons['other'] }
+          % endif
+      - "Other_Bondwaiver": |
+          % if Bond_Waiver_yes and surety_waiver_reasons['other']:
+          ${ Other_Bondwaiver }
+          % endif
       - "Additional_request_yes": ${ Additional_request_yes }
       - "Additional_requests": ${ Additional_requests }
       - "Date": ${ Date }
