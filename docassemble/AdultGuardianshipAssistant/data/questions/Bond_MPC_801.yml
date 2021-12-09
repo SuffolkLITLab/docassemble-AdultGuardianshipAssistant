@@ -13,7 +13,7 @@ code: |
   user_role = 'plaintiff'
   Are_you_filing_a_corporate_bond
   withoutsureties_yes
-  County
+  trial_court
   Fiduciary.name.last
   Fiduciary.address.zip
   personal_surety.address.unit
@@ -110,8 +110,6 @@ id: Tell us about the Respondent
 question: |
   Tell us about the Respondent
 fields:
-  - 'County': County
-    maxlength: 27
   - 'Real estate value': RealEstate_value
     maxlength: 18
   - 'Personal estate value': PersonalEstate_value
@@ -184,7 +182,7 @@ attachment:
       - "Withsureties_yes": ${ Withsureties_yes }
       - "CorporateBond_yes": ${ CorporateBond_yes }
       - "CorporateBond_number": ${ CorporateBond_number }
-      - "County": ${ County }
+      - "County": ${ trial_court.address.county }
       - "RealEstate_value": ${ RealEstate_value }
       - "PersonalEstate_value": ${ PersonalEstate_value }
       - "PenalSum_bond": ${ PenalSum_bond }
