@@ -137,7 +137,7 @@ code: |
   healthcare_proxies.gather()
   durable_powers_of_attorney.gather()
   person_with_care_or_custody.gather()
-  Guardian_relationship
+  
   set_progress(9.09)  
   Has_Assets
   Petitioner_appointee
@@ -148,6 +148,7 @@ code: |
     Guardian.email
     Guardian.address.city
     Guardian.name.first    
+    Guardian_relationship    
   set_progress(18.18)
   guardianship_type
   Nursing_facility_yes
@@ -488,8 +489,10 @@ fields:
   - code: |
       guardians[i].address_fields()
   - Is the ${ ordinal(i) } guardian a minor? (under 18): guardians[i].is_minor
+    datatype: yesnoradio
   - Is the ${ ordinal(i) } guardian incompetent?: guardians[i].is_incompetent
-  - Relationship to ${ other_parties.familiar() }: guardians[i].relationship
+    datatype: yesnoradio
+  - Relationship to ${ other_parties.familiar() }: guardians[i].relationship  
 ---
 generic object: ALIndividual
 code: |
@@ -517,6 +520,17 @@ fields:
   - Is ${x.familiar()} incompetent?: x.is_incompetent
     datatype: yesno
   - Relationship to ${ other_parties.familiar() }: x.relationship
+---
+sets:
+  - other_parties[0].address.address
+  - other_parties[0].address.city
+  - other_parties[0].address.state
+  - other_parties[0].address.zip
+question: |
+  Where does ${ other_parties.familiar() } live?
+fields:
+  - code: |
+      other_parties[0].address_fields(default_state="MA")
 ---
 sets:
   - nominated_guardian[i].name.first
@@ -731,6 +745,7 @@ fields:
 objects:
   - other_parties[0].principal_residence: ALAddress
 ---
+id: principal residence
 sets:
   - other_parties[0].principal_residence.address
   - other_parties[0].principal_residence.city
@@ -740,19 +755,19 @@ subquestion: |
   This is normally where ${ other_parties.familiar() } **usually**
   lives.
 fields:
-  #- no label: other_parties[0].principal_residence
-  #  datatype: object_radio
-  #  choices:
-  #    - other_parties[0].address
-  #    - petitioners[0].address
-  #  disable others:
-  #    - other_parties[0].address.address
-  #    - other_parties[0].address.city
-  #    - other_parties[0].address.state
-  #    - other_parties[0].address.zip
-  #    - other_parties[0].address.unit
-  #    - other_parties[0].address.country   
-  #  none of the above: True      
+  - no label: other_parties[0].principal_residence
+    datatype: object_radio
+    choices:
+      - other_parties[0].address
+      - petitioners[0].address
+    disable others:
+      - other_parties[0].principal_residence.address
+      - other_parties[0].principal_residence.city
+      - other_parties[0].principal_residence.state
+      - other_parties[0].principal_residence.zip
+      - other_parties[0].principal_residence.unit
+      - other_parties[0].principal_residence.country
+    none of the above: An address not listed above      
   - code: |
       other_parties[0].principal_residence.address_fields(show_country=True)
   - When did ${ other_parties[0] } begin living there?: Respondent_address_date
@@ -985,9 +1000,7 @@ question: |
 subquestion: |
   Does ${ other_parties.familiar() } have any of the following?
   Answer yes if any person, including you, has that role. Someone
-  may play more than one role in ${ other_parties.familiar() }'s life.
-  
-  Check all that apply:
+  may play more than one role in ${ other_parties.familiar() }'s life.  
 fields:
   - 'Currently appointed guardian': Current_Guardian
     datatype: yesnomaybe
@@ -1210,7 +1223,7 @@ fields:
       - "**Limited** guardianship (recommended)": limited
       - "**General** guardianship": general
   - note: |
-      What powers should the guardian have?
+      What decisions should the guardian have power over?
   - 'Insurance benefits': insurance_benefits_yes
     datatype: yesno
     show if:
@@ -1226,7 +1239,7 @@ fields:
     show if:
       variable: guardianship_type
       is: limited
-  - Other powers: Other_appointment
+  - Other limited powers: Other_appointment
     show if: Other_appointment_yes
     datatype: area
     maxlength: 320
@@ -1276,6 +1289,10 @@ fields:
     maxlength: 108
     datatype: area
     show if: Additional_request_yes
+validation code: |
+  if guardianship_type == "limited":
+    if not any([insurance_benefits_yes,financial_records_yes,Other_appointment_yes]):
+      validation_error("Ask for at least one specific power", field="guardianship_type")
 ---
 comment: |
   - 'Conservator requested': Conservator_requested_yes
