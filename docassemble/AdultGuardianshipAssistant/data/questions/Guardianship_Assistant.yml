@@ -66,7 +66,7 @@ objects:
   - parents: ALPeopleList
   - siblings: ALPeopleList.using(ask_number=True)
   - caretakers: ALPeopleList.using(complete_attribute="complete_table_9")
-  - guardians: ALPeopleList.using(complete_attribute="complete_table_9")
+  - existing_guardians: ALPeopleList.using(complete_attribute="complete_table_9")
   - nominated_guardian: ALPeopleList.using(complete_attribute="complete_table_9")
   - rep_payees: ALPeopleList.using(complete_attribute="complete_table_9")
   - healthcare_proxies: ALPeopleList.using(complete_attribute="complete_table_9")
@@ -131,7 +131,7 @@ code: |
   caretakers.gather()
   children.gather()
   Respondent_address_date
-  guardians.gather()
+  existing_guardians.gather()
   nominated_guardian.gather()
   rep_payees.gather()
   healthcare_proxies.gather()
@@ -456,7 +456,7 @@ fields:
 reconsider: True
 code: |
   relationship_people_choices.clear()
-  relationship_people_choices.extend(guardians.complete_elements())  
+  relationship_people_choices.extend(existing_guardians.complete_elements())  
   relationship_people_choices.extend(spouses.complete_elements())
   relationship_people_choices.extend(parents.complete_elements())
   relationship_people_choices.extend(siblings.complete_elements())
@@ -470,29 +470,29 @@ code: |
   relationship_people_choices.gathered = True
 ---
 sets:
-  - guardians[i].name.first
-  - guardians[i].name.last
+  - existing_guardians[i].name.first
+  - existing_guardians[i].name.last
 id: guardians
 question: |  
-  Name of ${ ordinal(i) } guardian
+  Name of ${ ordinal(i) } guardian that ${ other_parties.familiar() } currently has
 fields:
-  - Existing person: guardians[i]
+  - Existing person: existing_guardians[i]
     datatype: object
     choices: relationship_people_choices
     disable others: True
     exclude:
-      - guardians.complete_elements()
+      - existing_guardians.complete_elements()
   - code: |
-      guardians[i].name_fields()
-  - Phone number: guardians[i].phone_number
+      existing_guardians[i].name_fields()
+  - Phone number: existing_guardians[i].phone_number
     required: False
   - code: |
-      guardians[i].address_fields()
-  - Is the ${ ordinal(i) } guardian a minor? (under 18): guardians[i].is_minor
+      existing_guardians[i].address_fields()
+  - Is the ${ ordinal(i) } guardian a minor? (under 18): existing_guardians[i].is_minor
     datatype: yesnoradio
-  - Is the ${ ordinal(i) } guardian incompetent?: guardians[i].is_incompetent
+  - Is the ${ ordinal(i) } guardian incompetent?: existing_guardians[i].is_incompetent
     datatype: yesnoradio
-  - Relationship to ${ other_parties.familiar() }: guardians[i].relationship  
+  - Relationship to ${ other_parties.familiar() }: existing_guardians[i].relationship  
 ---
 generic object: ALIndividual
 code: |
@@ -1018,7 +1018,7 @@ fields:
     datatype: yesnomaybe
 ---
 code: |
-  guardians.there_are_any = Current_Guardian
+  existing_guardians.there_are_any = Current_Guardian
 ---
 code: |
   nominated_guardian.there_are_any = Current_GuardianDoc
@@ -1316,18 +1316,6 @@ subquestion: |
 fields:
   - 'Petition assetattachment': Petition_Assetattachment_yes
     datatype: yesno
-  - 'Date': Date
-    datatype: date
-  - 'Date 2': Date_2
-    datatype: date
-  - 'Date 3': Date_3
-    datatype: date
-  - 'Date 4': Date_4
-    datatype: date
-  - 'Date 5': Date_5
-    datatype: date
-  - 'Date 6': Date_6
-    datatype: date
 ---
 id: Attorney Information
 question: |
@@ -1337,6 +1325,19 @@ subquestion: |
 fields:
   - 'Attorney bbo': Attorney_BBO
     maxlength: 43
+---
+sets:
+  - Attorney.address.address
+id: more info about Attorney
+question: |
+  ${ Attorney }'s address
+fields:
+  - code: |
+      Attorney.address_fields()
+  - Phone number: Attorney.phone_number
+  - Email: Attorney.email
+    datatype: email
+    required: False
 ---
 progress: 100
 id: download
@@ -1620,12 +1621,6 @@ attachment:
           % endif
       - "Additional_request_yes": ${ Additional_request_yes }
       - "Additional_requests": ${ Additional_requests }
-      - "Date": ${ Date }
-      - "Date_2": ${ Date_2 }
-      - "Date_3": ${ Date_3 }
-      - "Date_4": ${ Date_4 }
-      - "Date_5": ${ Date_5 }
-      - "Date_6": ${ Date_6 }
       - "Attorney_BBO": ${ Attorney_BBO }
       - "Petitioner_Signature": ${ users[0].signature_if_final(i) }
       - "Copetitioner_Signature": ${ users[1].signature_if_final(i) }

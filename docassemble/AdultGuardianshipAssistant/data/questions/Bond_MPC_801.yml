@@ -116,10 +116,6 @@ fields:
     maxlength: 17
   - 'Penal sum bond': PenalSum_bond
     maxlength: 63
-  - 'Date': Date
-    datatype: date
-  - 'Date 2': Date_2
-    datatype: date
 ---
 progress: 100
 id: download
@@ -189,8 +185,6 @@ attachment:
       - "Fiduciary1_name_MI": ${ Fiduciary1_name_MI }
       - "Fiduciary2_name_MI": ${ Fiduciary2_name_MI }
       - "Appointment_title": ${ Appointment_title }
-      - "Date": ${ Date }
-      - "Date_2": ${ Date_2 }
       - "personal_surety_name2_last": ${ personal_surety.name.last }
       - "personal_surety_name2_middle": ${ personal_surety.name.middle }
       - "personal_surety_name2_first": ${ personal_surety.name.first }
@@ -203,9 +197,9 @@ attachment:
       - "PenalSum_bond2": ${ PenalSum_bond2 }
       - "state_incorporated": ${ state_incorporated }
       - "business_location_address": ${ business_location_address }
-      - "Fiduciary1_signature": ${ Fiduciary.signature_if_final(i) }
+      #- "Fiduciary1_signature": ${ Fiduciary.signature_if_final(i) }
       # It's a signature: test which file version this is; leave empty unless it's the final version)
-      - "Fiduciary2_signature": ${ Fiduciary2_signature if i == 'final' else '' }
+      #- "Fiduciary2_signature": ${ Fiduciary2_signature if i == 'final' else '' }
 ---
 # id: Bond_MPC_801 review screen
 # event: review_Bond_MPC_801
