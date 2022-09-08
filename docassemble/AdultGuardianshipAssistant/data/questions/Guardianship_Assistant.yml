@@ -21,6 +21,14 @@ metadata:
     - Thomas Levu
     - Quinten Steenhuis
 ---
+sections:
+  - section_getting_started: Getting started
+  - section_options: Reviewing your options
+  - section_qualifies: Can you get a guardianship?
+  - section_about_petitioner: Information about you
+  - section_about_respondent: Information about the protected person
+
+---
 comment: |
   This section is used by AssemblyLine to control how some of the questions work.
 mandatory: True
@@ -107,12 +115,14 @@ code: |
   if not last_option: 
     all_done    
   user_role = 'plaintiff'
+  other_parties[0].birthdate  
+  if other_parties[0].age_in_years(as_of=today().plus(months=6)) < 18:
+    exit_not_adult
+  if not respondent_is_resident or not respondent_is_mass_resident or respondent_has_another_stateguard:
+    exit_not_resident
   temporary_needed
   users[0].name.first
-  other_parties[0].birthdate  
-  if other_parties[0].age_in_years() < 18:
-    exit_not_adult
-  Petitioner_relationship  
+  Petitioner_relationship
   # has_copetitioner
   if has_copetitioner:
     users[1].address.address
@@ -241,9 +251,10 @@ buttons:
 ---
 id: birthdate only
 question: |
-  When was ${ other_parties.familiar() } born? 
-  - no label: other_parties[0].birthdate
-    datatype: BirthDate 
+  When was ${ other_parties.familiar() } born?
+fields:  
+  - ${ other_parties.familiar() }'s birth date: other_parties[0].birthdate
+    datatype: BirthDate
 ---
 event: exit_not_adult
 id: not an adult
@@ -251,10 +262,46 @@ question: |
   This is not the right form for you
 decoration: hand-paper
 subquestion: |
-  You can only use this form to get protections for an **adult**.
+  You can only use this form to get protections for:
+
+    * Someone who is over 18, or
+    * Someone who will turn 18 within the next 6 months
+  
   ${ other_parties[0].familiar() } is only ${ other_parties[0].age_in_years() }.
 buttons:
   - Exit: exit
+---
+id: residency screening questions
+question: |
+  Where does ${ other_parties.familiar() } live?
+fields:
+  - "Is ${ other_parties.familiar() } currently staying in Massachusetts?": respondent_is_resident
+    datatype: yesnoradio
+  - "Is ${ other_parties.familiar() } a Massachusetts resident?": respondent_is_mass_resident
+    show if: 
+      variable: respondent_is_resident
+      is: False
+    datatype: yesnoradio
+  - "Does ${ other_parties.familiar() } currently have a guardian in another state?": respondent_has_another_stateguard
+    show if: 
+      variable: respondent_is_mass_resident
+      is: False
+    datatype: yesnoradio
+---
+event: exit_not_resident
+id: not resident
+question: |
+  This is not the right form for you
+decoration: hand-paper
+subquestion: |
+  Massachusetts can only appoint a guardian if ${ other_parties.familiar() }
+  lives in Massachusetts, is a Massachusetts resident, and if there is no other state
+  that has appointed a guardian.
+  
+  ${ other_parties[0].familiar() } is only ${ other_parties[0].age_in_years() }.
+buttons:
+  - Exit: exit
+
 ---
 question: |
   Thank you for using the Guardianship Assistant
@@ -267,26 +314,27 @@ subquestion: |
   * [Healthcare
   Proxy](https://masshealthdecisions.org/health-care-proxy/#:~:text=The%20Massachusetts%20Health%20Care%20Proxy,or%20communicate%20those%20decisions%20yourself.Healthcare
   Proxy Forms); 
-  * [Representative Payeee](https://www.ssa.gov/payee/faqrep.htm);
-  and/or * [Durable Power of
+  * [Representative Payeee](https://www.ssa.gov/payee/faqrep.htm); and
+  * [Durable Power of
   Attorney](https://www.mass.gov/service-details/learn-about-the-power-of-attorney)
 event: all_done
 ---
 id: Temporary Guardianship
 question: | 
-  Do you need to the court to decide on this case in the next 90 days?
+  Do you need the court to decide on this case in the next 90 days?
 subquestion: |
   ${ collapse_template(when_temporary_guardianship_possible_template) }
 fields: 
-  - I need a temporary guardianship: temporary_needed
+  - I need guardianship right away: temporary_needed
     datatype: yesnoradio    
 ---
 template: when_temporary_guardianship_possible_template
 subject: |
-  When can I get a temporary guardianship?
+  When can you get an immediate guardianship decision?
 content:  |
-  You may request a temporary guardianship if there is an emergency or urgent
-  situation or appointment which requires a guardian within the next 90 days.
+  An order that takes place in the next 90 days is called a "temporary guardianship".
+
+  You can get a temporary guardianship when there is an emergency or urgent situation or appointment which requires a guardian within the next 90 days.
 ---
 id: Has Co-Petitioner?
 question: |
@@ -326,7 +374,7 @@ fields:
   - Does ${ users[1] } live at a different address than ${ users[0].familiar() }?: CoPetitioner_Petitioner_different_address
     datatype: yesnoradio
     required: false
-    disable others: True    
+    disable others: True
   - code: |
       users[1].address_fields(default_state="MA")
 ---
@@ -335,8 +383,8 @@ variable name: relationship_options
 data:
   spouse: 
     question: Spouse
-    document: spouse    
-  parent:    
+    document: spouse
+  parent:
     question: Parent
     document: parent
   child:
