@@ -21,14 +21,6 @@ metadata:
     - Thomas Levu
     - Quinten Steenhuis
 ---
-sections:
-  - section_getting_started: Getting started
-  - section_options: Reviewing your options
-  - section_qualifies: Can you get a guardianship?
-  - section_about_petitioner: Information about you
-  - section_about_respondent: Information about the protected person
-
----
 comment: |
   This section is used by AssemblyLine to control how some of the questions work.
 mandatory: True
@@ -62,6 +54,11 @@ features:
   navigation: True
 ---
 sections:
+  - section_getting_started: Getting started
+  - section_options: Reviewing your options
+  - section_qualifies: Can you get a guardianship?
+  - section_about_petitioner: Information about you
+  - section_about_respondent: Information about the protected person
   - review_Guardianship_Assistant: Review your answers
 ---
 objects:
@@ -118,8 +115,9 @@ code: |
   other_parties[0].birthdate  
   if other_parties[0].age_in_years(as_of=today().plus(months=6)) < 18:
     exit_not_adult
-  if not respondent_is_resident or not respondent_is_mass_resident or respondent_has_another_stateguard:
+  if (not respondent_is_resident and not respondent_is_mass_resident) or respondent_has_another_stateguard:
     exit_not_resident
+  respondent_can_make_all_decisions    
   temporary_needed
   users[0].name.first
   Petitioner_relationship
@@ -283,9 +281,6 @@ fields:
       is: False
     datatype: yesnoradio
   - "Does ${ other_parties.familiar() } currently have a guardian in another state?": respondent_has_another_stateguard
-    show if: 
-      variable: respondent_is_mass_resident
-      is: False
     datatype: yesnoradio
 ---
 event: exit_not_resident
@@ -301,7 +296,48 @@ subquestion: |
   ${ other_parties[0].familiar() } is only ${ other_parties[0].age_in_years() }.
 buttons:
   - Exit: exit
-
+---  
+id: incapacity questions
+question: |
+  ${ other_parties.familiar() }'s decision making ability
+subquestion: |
+  The questions on this screen are about ${ other_parties.familiar() }'s ability to make decisions
+  overall. If ${ other_parties.familiar() } can make some but not all decisions on their own,
+  we will ask about the areas where ${ other_parties.familiar() } needs help next.
+fields:
+  - "Is ${ other_parties.familiar() } able to make all of their own decisions?": respondent_can_make_all_decisions
+    datatype: yesnoradio
+  - "Can ${ other_parties.familiar() } make all of their own decisions if they have help?": respondent_can_make_decisions_with_assistance
+    show if:
+      variable: respondent_can_make_all_decisions
+      is: False
+    datatype: yesnoradio
+  - "Is ${ other_parties.familiar() } able to make some decisions on their own?": respondent_can_make_some_decisions
+    show if:
+      variable: respondent_can_make_decisions_with_assistance
+      is: False
+    datatype: yesnoradio
+---
+id: medical decision making
+question: |
+  Can ${ other_parties.familiar() } make their own decisions about medical care?
+#If YES then proceed to next set of limitations. If NO have checkbox of limitations and option to type what person CAN'T do RE limitation section.
+fields:
+  - "${ other_parties.familiar() } can make all of their own decisions about medical care": respondent_can_make_all_meddecisions
+    datatype: yesnoradio
+  - "${ other_parties.familiar() } can make and communicate their own decisions": respondent_can_make_own_meddecisions
+    show if:
+      variable: respondent_can_make_all_meddecisions
+      is: False
+    datatype: checkboxes
+    choices:
+      - The continuance or withdrawal of life-sustaining treatment: life_or_death
+      - about choosing a long-term care facility: long_term_care
+      - to manage their medications even with the assistance of a third party: manage_medication
+  - "Briefly describe what medical decisions ${ other_parties.familiar() } is **not** able to make": respondent_describe_medical_decisions_unable_to_make
+    datatype: area
+    js show if: |
+      val("respondent_can_make_own_meddecisions['life_or_death']") === null && val("respondent_can_make_own_meddecisions['long_term_care']") === null && val("respondent_can_make_own_meddecisions['manage_medication']") === null
 ---
 question: |
   Thank you for using the Guardianship Assistant
