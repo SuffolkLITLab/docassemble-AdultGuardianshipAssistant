@@ -256,6 +256,7 @@ subquestion: |
 buttons:
   - Exit: exit
 ---
+id: "thank you for using the guardianship assistant"
 question: |
   Thank you for using the Guardianship Assistant
 subquestion: |
@@ -293,7 +294,9 @@ question: |
   Is there a Co-Petitioner?
 subquestion: |
   The "Co-Petitioner" is a second person asking the court to appoint a guardian for ${ other_parties.familiar() }.
-yesno: has_copetitioner
+fields:
+  - no label: has_copetitioner
+    datatype: yesnoradio
 ---
 code: |
   if has_copetitioner:
@@ -310,6 +313,7 @@ code: |
 ---
 sets: 
   - users[1].name.first
+id: "what is the co petitioners name"
 question: |
   What is the Co-Petitioner's name?
 subquestion: |
@@ -526,6 +530,7 @@ sets:
   - other_parties[0].address.city
   - other_parties[0].address.state
   - other_parties[0].address.zip
+id: "where does other parties familiar live"
 question: |
   Where does ${ other_parties.familiar() } live?
 fields:
@@ -842,6 +847,7 @@ subquestion: |
   Remember to come back to this window to continue and sign your form.
 ---
 # TODO - these will need to be reformatted/input into the correct page
+id: "kisha find a place for these"
 question: |
   Kisha Find a place for these
 fields:
@@ -1157,6 +1163,7 @@ fields:
     js show if: |
       val("Petitioner_appointee") || val("Other_appointee_yes")      
 ---
+id: " 2"
 question: |
   ...
 fields:  
@@ -1181,7 +1188,9 @@ question: |
   Would you like the court to consider appointing a co-guardian?
 subquestion: |
   More than one person can serve as a guardian. Co-guardians have equal decision-making power.
-yesno: coguardian_attachment_yes
+fields:
+  - no label: coguardian_attachment_yes
+    datatype: yesnoradio
 ---
 id: Co-Guardian information
 question: |
