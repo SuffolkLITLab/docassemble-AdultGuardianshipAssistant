@@ -1087,7 +1087,7 @@ fields:
     show if: second_income
   - Do they have additional sources of income?: Respondent_income_attachment_yes
     datatype: yesno
-    show if: second_incomePetitioner_Signature
+    show if: second_income
 # TODO need to add code that says they need to attach extra doc to petition - or ask Quinten about addendum
   - 'About how much money in total do they have in income?': Respondent_Income2_total
     maxlength: 22
